@@ -13,6 +13,11 @@ st.markdown("""
         font-family: 'Inter', sans-serif;
     }
 
+    /* FIX FOR OVERLAPPING STREAMLIT ICONS */
+    .material-symbols-rounded, .material-icons {
+        font-family: 'Material Symbols Rounded' !important;
+    }
+
     .stApp {
         background: #05070a;
         color: #ffffff;
@@ -117,16 +122,14 @@ def render_poster(url):
 df = load_data()
 all_genres = sorted(list(set(g for sub in df['Genres'] for g in sub)))
 
-# --- 3. CLEAN UPGRADED SIDEBAR ---
+# --- 3. SIDEBAR NAVIGATION ---
 with st.sidebar:
     st.title("🎛️ AI Parameters")
-    st.markdown("Set the criteria the AI uses to rank the database.")
     
     search_query = st.text_input("🔍 Direct Title Search", placeholder="e.g., Dune...")
     st.divider()
     
     st.markdown("**1. Target Genres**")
-    # UPGRADE: Using pills instead of multiselect for a cleaner UX
     selected_genres = st.pills(
         "Select tags below:", 
         options=all_genres, 
@@ -139,9 +142,24 @@ with st.sidebar:
     min_rating = st.slider("2. Quality Floor (Rating)", 5.0, 10.0, 7.0)
     
     st.divider()
-    st.markdown("### 🛠️ Developer Info")
-    st.caption("UI Optimized for High-Res Displays")
-    st.caption("Build: 4.0.3-Alpha")
+    
+    # --- UPGRADE: Student Details ---
+    st.markdown("### 👨‍💻 Student Details")
+    st.caption("**Name:** Mark Elvis Chiemezuo")
+    st.caption("**Reg No:** 20231409352")
+    st.caption("**Alias:** errorHQ")
+    st.caption("**Level:** 300L Cybersecurity")
+    
+    st.divider()
+    
+    # --- UPGRADE: Description of how it works ---
+    st.markdown("### 🧠 Engine Logic")
+    st.info(
+        "**The Neural Engine** calculates a dynamic Match Score based on your inputs:\n\n"
+        "1️⃣ **Filter:** Eliminates titles below your specified Quality Floor.\n"
+        "2️⃣ **Match:** Computes the percentage of your target genres present in each surviving title.\n"
+        "3️⃣ **Rank:** Sorts the databanks by highest Match Score, followed by IMDb rating."
+    )
 
 # --- 4. MAIN DASHBOARD ---
 st.header("⚡ Neural Discovery Engine")
@@ -216,7 +234,6 @@ else:
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    # UPGRADE: Replaced the buggy expander with a clean Popover button
                     with st.popover("📖 View Synopsis", use_container_width=True):
                         st.markdown(f"**{row['Title']}**")
                         st.write(row.get('Description', 'No synopsis available in databanks.'))
