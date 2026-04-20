@@ -2,144 +2,154 @@ import streamlit as st
 import pandas as pd
 import time
 
-# --- 1. UI CONFIGURATION & GLASS-MORPHIC THEME ---
-st.set_page_config(page_title="Cinema AI | Premium", page_icon="🎬", layout="wide")
+# --- 1. SETTINGS & STYLING ---
+st.set_page_config(page_title="AI Movie Engine", page_icon="🧬", layout="wide")
 
 st.markdown("""
     <style>
-    /* Main App Background */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+    
+    html, body, [class*="st-"] {
+        font-family: 'Inter', sans-serif;
+    }
+
     .stApp {
-        background: radial-gradient(circle at top left, #0f172a, #020617);
-        color: #f8fafc;
+        background: #05070a;
+        color: #ffffff;
     }
 
-    /* Glassmorphic Card Style */
+    /* Selection Logic Header */
+    .logic-box {
+        background: rgba(99, 102, 241, 0.1);
+        border: 1px solid #6366f1;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+    }
+
+    /* Enhanced Movie Card */
     div[data-testid="stVerticalBlock"] div[style*="border"] {
-        background: rgba(30, 41, 59, 0.5) !important;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        border-radius: 15px !important;
-        padding: 20px;
-        transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        background: #0f172a !important;
+        border: 1px solid #1e293b !important;
+        border-radius: 16px !important;
+        padding: 0px !important; /* Reset for image flush */
+        overflow: hidden;
+        transition: 0.3s ease;
     }
 
-    div[data-testid="stVerticalBlock"] div[style*="border"]:hover {
-        transform: scale(1.02);
-        border: 1px solid rgba(99, 102, 241, 0.5) !important;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    .movie-info-container {
+        padding: 15px;
     }
 
-    /* Hero Section */
-    .hero-container {
-        padding: 50px 0px;
-        text-align: center;
+    /* Progress Bar for Match Score */
+    .match-bar-bg {
+        background: #1e293b;
+        border-radius: 5px;
+        height: 6px;
+        width: 100%;
+        margin-top: 8px;
     }
-    .hero-title {
-        font-size: 3.5rem;
-        font-weight: 900;
-        background: linear-gradient(to right, #818cf8, #c084fc);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 0px;
-    }
-    .hero-subtitle {
-        color: #94a3b8;
-        font-size: 1.1rem;
-        letter-spacing: 2px;
-        text-transform: uppercase;
+    .match-bar-fill {
+        background: linear-gradient(90deg, #6366f1, #a855f7);
+        height: 6px;
+        border-radius: 5px;
     }
 
-    /* Text Styling */
-    .movie-title { font-size: 1.4rem; font-weight: 700; color: #ffffff; margin: 10px 0 5px 0; }
-    .movie-rating { color: #fbbf24; font-weight: 600; font-size: 1rem; }
-    .badge {
-        background: rgba(99, 102, 241, 0.2);
-        color: #a5b4fc;
-        padding: 2px 10px;
-        border-radius: 20px;
+    .stat-label {
         font-size: 0.75rem;
-        font-weight: 600;
-        margin-right: 5px;
-    }
-
-    /* Sidebar Tweaks */
-    section[data-testid="stSidebar"] {
-        background-color: rgba(15, 23, 42, 0.8);
-        border-right: 1px solid rgba(255, 255, 255, 0.05);
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 1px;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 2. DATA ENGINE ---
+# --- 2. DATA ---
 @st.cache_data
-def get_data():
-    api_data = {
-        'Title': ['The Dark Knight', 'Inception', 'Interstellar', 'Avengers: Endgame', 'John Wick', 'La La Land', 'The Terminator', 'Gladiator', 'The Conjuring', 'Superbad', 'Dune', 'Blade Runner 2049'],
+def load_data():
+    return pd.DataFrame({
+        'Title': ['The Dark Knight', 'Inception', 'Interstellar', 'Avengers: Endgame', 'John Wick', 'The Matrix', 'Dune', 'Blade Runner 2049'],
         'Image_URL': [
             'https://upload.wikimedia.org/wikipedia/en/1/1c/The_Dark_Knight_%282008_film%29.jpg',
             'https://upload.wikimedia.org/wikipedia/en/2/2e/Inception_%282010%29_theatrical_poster.jpg',
             'https://upload.wikimedia.org/wikipedia/en/b/bc/Interstellar_film_poster.jpg',
             'https://upload.wikimedia.org/wikipedia/en/0/0d/Avengers_Endgame_poster.jpg',
             'https://upload.wikimedia.org/wikipedia/en/9/98/John_Wick_TeaserPoster.jpg',
-            'https://upload.wikimedia.org/wikipedia/en/a/ab/La_La_Land_%28film%29.png',
-            'https://upload.wikimedia.org/wikipedia/en/7/70/Terminator1984movieposter.jpg',
-            'https://upload.wikimedia.org/wikipedia/en/f/fb/Gladiator_%282000_film_poster%29.png',
-            'https://upload.wikimedia.org/wikipedia/en/1/1f/Conjuring_poster.jpg',
-            'https://upload.wikimedia.org/wikipedia/en/8/8b/Superbad_Poster.png',
+            'https://upload.wikimedia.org/wikipedia/en/c/c1/The_Matrix_Poster.jpg',
             'https://upload.wikimedia.org/wikipedia/en/8/8e/Dune_%282021_film%29_poster.jpg',
             'https://upload.wikimedia.org/wikipedia/en/9/9b/Blade_Runner_2049_poster.png'
         ],
-        'Genres': [['Action', 'Crime', 'Drama'], ['Action', 'Sci-Fi'], ['Sci-Fi', 'Adventure'], ['Action', 'Sci-Fi'], ['Action', 'Thriller'], ['Romance', 'Musical'], ['Action', 'Sci-Fi'], ['Action', 'Drama'], ['Horror', 'Thriller'], ['Comedy'], ['Sci-Fi', 'Adventure'], ['Sci-Fi', 'Drama']],
-        'Rating': [9.0, 8.8, 8.6, 8.4, 7.4, 8.0, 8.1, 8.5, 7.5, 7.6, 8.0, 8.0],
-        'Description': ["Gotham's savior vs the agent of chaos.", "Dream infiltration at the highest stakes.", "A journey beyond time to save our species.", "The final stand against the mad titan.", "Don't touch the dog. Don't touch the car.", "A melody of dreams in the city of stars.", "A relentless machine from the future.", "A general who became a slave to conquer an empire.", "The true files of the Warrens.", "One night. Three friends. Zero sobriety.", "A noble family entangled in a war for spice.", "A new blade runner unearths a long-buried secret."]
-    }
-    return pd.DataFrame(api_data)
+        'Genres': [['Action', 'Crime'], ['Action', 'Sci-Fi'], ['Sci-Fi', 'Adventure'], ['Action', 'Sci-Fi'], ['Action', 'Thriller'], ['Action', 'Sci-Fi'], ['Sci-Fi', 'Adventure'], ['Sci-Fi', 'Drama']],
+        'Rating': [9.0, 8.8, 8.6, 8.4, 7.4, 8.7, 8.0, 8.1]
+    })
 
-df = get_data()
+df = load_data()
 all_genres = sorted(list(set(g for sub in df['Genres'] for g in sub)))
 
-# --- 3. SIDEBAR NAVIGATION ---
+# --- 3. CLEAR CRITERIA SIDEBAR ---
 with st.sidebar:
-    st.markdown("<h2 style='color:#818cf8;'>Settings</h2>", unsafe_allow_html=True)
-    selected_genres = st.multiselect("Pick Your Vibes", all_genres, default=["Sci-Fi", "Action"])
-    min_rating = st.slider("Quality Threshold", 5.0, 10.0, 7.5)
+    st.title("🎛️ AI Parameters")
+    st.markdown("Set the criteria the AI uses to rank the database.")
     
-    st.markdown("---")
-    st.markdown("### 🟢 System Status")
-    st.caption("Engine: Neuro-Link v2.4")
-    st.caption("Latency: 14ms")
-    st.info("Personalized for your friend")
+    selected_genres = st.multiselect("1. Target Genres", all_genres, default=["Action", "Sci-Fi"])
+    min_rating = st.slider("2. Quality Floor (Rating)", 5.0, 10.0, 7.0)
+    
+    st.divider()
+    st.markdown("### 🛠️ Developer Info")
+    st.caption("UI Optimized for High-Res Displays")
+    st.caption("Build: 4.0.1-Alpha")
 
-# --- 4. MAIN CONTENT ---
-st.markdown("""
-    <div class="hero-container">
-        <p class="hero-subtitle">Next-Gen Discovery</p>
-        <h1 class="hero-title">Cinema AI Pro</h1>
+# --- 4. MAIN DASHBOARD ---
+st.header("⚡ Neural Discovery Engine")
+
+# SELECTION LOGIC EXPLAINER
+if selected_genres:
+    st.markdown(f"""
+    <div class="logic-box">
+        <b>Selection Logic:</b> Highlighting movies with a <b>Rating ≥ {min_rating}</b> 
+        that match at least one of these tags: <code>{', '.join(selected_genres)}</code>.
     </div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
-# Filter Logic
-df['Match_Count'] = df['Genres'].apply(lambda x: len(set(x).intersection(set(selected_genres))))
-results = df[(df['Match_Count'] > 0) & (df['Rating'] >= min_rating)].sort_values(by='Rating', ascending=False)
+# Calculation
+df['Matches'] = df['Genres'].apply(lambda x: list(set(x).intersection(set(selected_genres))))
+df['Match_Score'] = df['Matches'].apply(lambda x: len(x))
+max_possible = len(selected_genres) if selected_genres else 1
 
-if results.empty:
-    st.info("✨ No matches found. Try adjusting the quality threshold or genres!")
+# Filter & Sort
+results = df[(df['Match_Score'] > 0) & (df['Rating'] >= min_rating)].sort_values(by=['Match_Score', 'Rating'], ascending=False)
+
+if not selected_genres:
+    st.info("👋 Select some genres in the sidebar to begin the analysis.")
+elif results.empty:
+    st.warning("⚠️ No movies found with that combination. Try lowering the Quality Floor.")
 else:
-    cols = st.columns(3)
+    cols = st.columns(4)
     for idx, (i, row) in enumerate(results.iterrows()):
-        with cols[idx % 3]:
+        # Calculate percentage for the progress bar
+        match_pct = min((row['Match_Score'] / max_possible) * 100, 100)
+        
+        with cols[idx % 4]:
             with st.container(border=True):
+                # Flush Image
                 st.image(row['Image_URL'], use_container_width=True)
                 
-                # Title & Rating
-                st.markdown(f"<div class='movie-title'>{row['Title']}</div>", unsafe_allow_html=True)
-                st.markdown(f"<div class='movie-rating'>★ {row['Rating']}</div>", unsafe_allow_html=True)
-                
-                # Genre Badges
-                badge_html = "".join([f"<span class='badge'>{g}</span>" for g in row['Genres']])
-                st.markdown(f"<div style='margin-bottom: 15px;'>{badge_html}</div>", unsafe_allow_html=True)
-                
-                st.write(f"_{row['Description']}_")
-                st.divider()
-                st.caption(f"Confidence: {row['Match_Count'] * 33}% Match")
+                # Content Area
+                st.markdown(f"""
+                <div class="movie-info-container">
+                    <div style="font-weight:700; font-size:1.1rem; min-height:55px;">{row['Title']}</div>
+                    <div style="display:flex; justify-content:space-between; margin-top:10px;">
+                        <span class="stat-label">IMDb</span>
+                        <span style="color:#fbbf24; font-weight:700;">★ {row['Rating']}</span>
+                    </div>
+                    <div style="margin-top:15px;">
+                        <span class="stat-label">AI Match Score: {int(match_pct)}%</span>
+                        <div class="match-bar-bg">
+                            <div class="match-bar-fill" style="width: {match_pct}%;"></div>
+                        </div>
+                    </div>
+                    <div style="margin-top:10px; font-size:0.7rem; color:#6366f1;">
+                        Matched: {", ".join(row['Matches'])}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
