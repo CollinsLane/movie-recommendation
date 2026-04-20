@@ -62,11 +62,16 @@ st.markdown("""
         letter-spacing: 1px;
     }
     
-    /* Tweaking the expander UI to match the dark theme */
-    .streamlit-expanderHeader {
-        background-color: transparent !important;
-        color: #a855f7 !important;
-        font-size: 0.85rem;
+    /* Popover Button Styling */
+    div[data-testid="stPopover"] button {
+        background-color: rgba(99, 102, 241, 0.1) !important;
+        border: 1px solid rgba(99, 102, 241, 0.3) !important;
+        color: #a5b4fc !important;
+        border-radius: 8px !important;
+    }
+    div[data-testid="stPopover"] button:hover {
+        background-color: rgba(99, 102, 241, 0.2) !important;
+        border: 1px solid #6366f1 !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -82,7 +87,7 @@ def load_data():
             'https://upload.wikimedia.org/wikipedia/en/b/bc/Interstellar_film_poster.jpg',
             'https://upload.wikimedia.org/wikipedia/en/0/0d/Avengers_Endgame_poster.jpg',
             'https://upload.wikimedia.org/wikipedia/en/9/98/John_Wick_TeaserPoster.jpg',
-            'broken_url_test', # Intentionally broken to trigger the NO SIGNAL fail-safe
+            'broken_url_test', 
             'https://upload.wikimedia.org/wikipedia/en/8/8e/Dune_%282021_film%29_poster.jpg',
             'https://upload.wikimedia.org/wikipedia/en/9/9b/Blade_Runner_2049_poster.png'
         ],
@@ -101,7 +106,6 @@ def load_data():
     })
 
 def render_poster(url):
-    """Fallback handler: If image URL is dead, show a custom cyberpunk placeholder."""
     if pd.isna(url) or url == 'broken_url_test':
         st.image("https://via.placeholder.com/300x450/0f172a/6366f1?text=NO+SIGNAL", use_container_width=True)
     else:
@@ -113,7 +117,7 @@ def render_poster(url):
 df = load_data()
 all_genres = sorted(list(set(g for sub in df['Genres'] for g in sub)))
 
-# --- 3. SIDEBAR NAVIGATION ---
+# --- 3. CLEAN UPGRADED SIDEBAR ---
 with st.sidebar:
     st.title("🎛️ AI Parameters")
     st.markdown("Set the criteria the AI uses to rank the database.")
@@ -121,26 +125,34 @@ with st.sidebar:
     search_query = st.text_input("🔍 Direct Title Search", placeholder="e.g., Dune...")
     st.divider()
     
-    selected_genres = st.multiselect("1. Target Genres", all_genres, default=["Action", "Sci-Fi"])
+    st.markdown("**1. Target Genres**")
+    # UPGRADE: Using pills instead of multiselect for a cleaner UX
+    selected_genres = st.pills(
+        "Select tags below:", 
+        options=all_genres, 
+        selection_mode="multi", 
+        default=["Action", "Sci-Fi"],
+        label_visibility="collapsed"
+    )
+    
+    st.markdown("<br>", unsafe_allow_html=True)
     min_rating = st.slider("2. Quality Floor (Rating)", 5.0, 10.0, 7.0)
     
     st.divider()
     st.markdown("### 🛠️ Developer Info")
     st.caption("UI Optimized for High-Res Displays")
-    st.caption("Build: 4.0.2-Alpha")
+    st.caption("Build: 4.0.3-Alpha")
 
 # --- 4. MAIN DASHBOARD ---
 st.header("⚡ Neural Discovery Engine")
 
 # --- 5. FILTER LOGIC & OVERRIDES ---
 if search_query:
-    # Override filters if the user is searching for a specific movie
     results = df[df['Title'].str.contains(search_query, case=False, na=False)].copy()
     max_possible = 1
     results['Match_Score'] = 1 
     results['Matches'] = results['Genres'] 
 else:
-    # Standard AI Math Logic
     df['Matches'] = df['Genres'].apply(lambda x: list(set(x).intersection(set(selected_genres))))
     df['Match_Score'] = df['Matches'].apply(lambda x: len(x))
     max_possible = len(selected_genres) if selected_genres else 1
@@ -174,7 +186,6 @@ if not selected_genres and not search_query:
 elif results.empty:
     st.warning("⚠️ No movies found with that combination. Try lowering the Quality Floor or clearing your search.")
 else:
-    # Simulated processing delay for the "AI Engine" feel
     with st.spinner("Calibrating Neural Pathways..."):
         time.sleep(0.35) 
         
@@ -184,10 +195,8 @@ else:
             
             with cols[idx % 4]:
                 with st.container(border=True):
-                    # Uses the fail-safe function instead of native st.image
                     render_poster(row['Image_URL'])
                     
-                    # Content Area
                     st.markdown(f"""
                     <div class="movie-info-container">
                         <div style="font-weight:700; font-size:1.1rem; min-height:55px;">{row['Title']}</div>
@@ -201,13 +210,14 @@ else:
                                 <div class="match-bar-fill" style="width: {match_pct}%;"></div>
                             </div>
                         </div>
-                        <div style="margin-top:10px; font-size:0.7rem; color:#6366f1;">
+                        <div style="margin-top:10px; margin-bottom:15px; font-size:0.7rem; color:#6366f1;">
                             Matched: {", ".join(row['Matches']) if row['Matches'] else "Direct Title Match"}
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    # Expandable Synopsis 
-                    with st.expander("View Synopsis"):
+                    # UPGRADE: Replaced the buggy expander with a clean Popover button
+                    with st.popover("📖 View Synopsis", use_container_width=True):
+                        st.markdown(f"**{row['Title']}**")
                         st.write(row.get('Description', 'No synopsis available in databanks.'))
                         st.caption("Source: Neural Discovery Engine")
