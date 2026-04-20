@@ -78,6 +78,24 @@ st.markdown("""
         background-color: rgba(99, 102, 241, 0.2) !important;
         border: 1px solid #6366f1 !important;
     }
+
+    /* ✨ PREMIUM SIDEBAR UPGRADE ✨ */
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #05070a 0%, #0f122b 100%) !important;
+        border-right: 1px solid rgba(168, 85, 247, 0.3) !important;
+        box-shadow: 5px 0 15px rgba(0, 0, 0, 0.5);
+    }
+
+    section[data-testid="stSidebar"] .stMarkdown, 
+    section[data-testid="stSidebar"] .stText {
+        color: #e2e8f0 !important;
+    }
+    
+    section[data-testid="stSidebar"] div[data-baseweb="input"] {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        border: 1px solid rgba(99, 102, 241, 0.3) !important;
+        border-radius: 8px !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
